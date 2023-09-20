@@ -2,8 +2,8 @@
 Builds a SDL app for android without using gradle.
 
 ## Supported Platforms
-The scripts has been tested on windows and linux, though it should also work on MacOS
-If you are on linux use the `build.sh` or use the `win-build.sh` if you are a windows user.
+The scripts has been tested on windows and linux, though it should also work on MacOS.  
+If you are on linux use the `build.sh` or use the `win-build.sh` if you are a windows user.  
 For windows you need an environment like MSYS2 for running the shell script. We are trying to add a windows batch script.
 
 ## Usage
@@ -14,4 +14,4 @@ For windows you need an environment like MSYS2 for running the shell script. We 
 
 
 ## Known Issues
-Currently changing the package name is not allowed as SDL hardcodes org.libsdl.app in its sources so if the package name is modified either through the scripts or directly in the AndroidManifest.xml the app will crash as it will not be able to find org.libsdl.app.SDLActivity
+Currently changing the **package name** is not allowed as SDL hardcodes org.libsdl.app in its sources. If the package name is modified either through the scripts or directly in the AndroidManifest.xml the app will crash as it will not be able to find org.libsdl.app.SDLActivity
