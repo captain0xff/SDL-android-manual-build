@@ -12,6 +12,4 @@ For windows you need an environment like MSYS2 for running the shell script. We 
 3. Modify the paths in script as per your project and setup.
 4. Build and install the apk with `./build.sh --deploy`.
 
-
 ## Known Issues
-Currently changing the **package name** is not allowed as SDL hardcodes org.libsdl.app in its sources. If the package name is modified either through the scripts or directly in the AndroidManifest.xml the app will crash as it will not be able to find org.libsdl.app.SDLActivity

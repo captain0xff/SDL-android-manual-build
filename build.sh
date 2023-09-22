@@ -1,12 +1,13 @@
 # App details
 APP_LABEL=Game
 APK_NAME=apk-debug.apk
-DOMAIN_NAME=org
-COMPANY_NAME=libsdl
-PRODUCT_NAME=app
+DOMAIN_NAME=com
+COMPANY_NAME=captain
+PRODUCT_NAME=game
 TARGET_SDK=30
 MIN_SDK=21
 TARGET_ARCH=arm64-v8a
+ACTIVITY_NAME=GameActivity
 
 
 # Project details
@@ -38,6 +39,10 @@ JAVA_INTERMEDIATES_PATH=$BUILD_INTERMEDIATES_PATH/obj
 DEX_PATH=$BUILD_INTERMEDIATES_PATH
 NATIVE_LIBS_PATH=$BUILD_INTERMEDIATES_PATH/lib/$TARGET_ARCH
 NATIVE_BUILD_PATH=$BUILD_INTERMEDIATES_PATH/native
+
+
+# Exit on error
+set -e
 
 
 # Add the app details to the project and prepare it for building
@@ -78,6 +83,42 @@ prepare_project() {
 		sed -i "s#$APP_NAME_OLD#$APP_NAME_NEW#g" $RES_PATH/values/strings.xml
 	else
 		echo "INFO: App label not updated."
+	fi
+
+	# Update the activity name
+	ACTIVITY_NAME_OLD=`grep -w "        <activity android:name" $ANDROID_MANIFEST_PATH | head -1`
+	ACTIVITY_NAME_NEW="        <activity android:name=\"$ACTIVITY_NAME\""
+	if [ "$ACTIVITY_NAME_OLD" != "$ACTIVITY_NAME_NEW" ]; then
+		sed -i "s#$ACTIVITY_NAME_OLD#$ACTIVITY_NAME_NEW#g" $ANDROID_MANIFEST_PATH
+	else
+		echo "INFO: Activity name not updated in $ANDROID_MANIFEST_PATH"
+	fi
+
+	# Add the ACTIVITY_NAME.java if it doesn't exist else modify the existing one
+	if [ -f "$JAVA_SRC_PATH/$ACTIVITY_NAME.java" ]; then
+		PACKAGE_NAME_OLD=`grep -w "package" $JAVA_SRC_PATH/$ACTIVITY_NAME.java | head -1`
+		PACKAGE_NAME_NEW="package $DOMAIN_NAME.$COMPANY_NAME.$PRODUCT_NAME;"
+		if [ "$PACKAGE_NAME_OLD" != "$PACKAGE_NAME_NEW" ]; then
+			sed -i "s#$PACKAGE_NAME_OLD#$PACKAGE_NAME_NEW#g" $JAVA_SRC_PATH/$ACTIVITY_NAME.java
+		else
+			echo "INFO: Package name not updated in $JAVA_SRC_PATH/$ACTIVITY_NAME.java."
+		fi
+
+		ACTIVITY_NAME_OLD=`grep -w "extends SDLActivity" $JAVA_SRC_PATH/$ACTIVITY_NAME.java | head -1`
+		ACTIVITY_NAME_NEW="public class $ACTIVITY_NAME extends SDLActivity {}"
+		if [ "$ACTIVITY_NAME_OLD" != "$ACTIVITY_NAME_NEW" ]; then
+			sed -i "s#$ACTIVITY_NAME_OLD#$ACTIVITY_NAME_NEW#g" $JAVA_SRC_PATH/$ACTIVITY_NAME.java
+		else
+			echo "INFO: Activity name not updated in $JAVA_SRC_PATH/$ACTIVITY_NAME.java."
+		fi
+	else
+		echo "INFO: File $JAVA_SRC_PATH/$ACTIVITY_NAME.java doesn't exist. Creating a new file..."
+		echo "package $DOMAIN_NAME.$COMPANY_NAME.$PRODUCT_NAME;" >> $JAVA_SRC_PATH/$ACTIVITY_NAME.java
+		echo >> $JAVA_SRC_PATH/$ACTIVITY_NAME.java
+		echo "import org.libsdl.app.SDLActivity;" >> $JAVA_SRC_PATH/$ACTIVITY_NAME.java
+		echo >> $JAVA_SRC_PATH/$ACTIVITY_NAME.java
+		echo "public class $ACTIVITY_NAME extends SDLActivity {}" >> $JAVA_SRC_PATH/$ACTIVITY_NAME.java
+		echo >> $JAVA_SRC_PATH/$ACTIVITY_NAME.java
 	fi
 }
 
@@ -127,7 +168,7 @@ compile_java() {
 
 	echo "INFO: Generating the classes.dex..."
 
-	$BUILD_TOOLS/d8 $JAVA_INTERMEDIATES_PATH/$DOMAIN_NAME/$COMPANY_NAME/$PRODUCT_NAME/* \
+	$BUILD_TOOLS/d8 $JAVA_INTERMEDIATES_PATH/*/*/*/* \
 		--output $BUILD_INTERMEDIATES_PATH \
 		--lib $PLATFORMS/android-$TARGET_SDK/android.jar \
 		--classpath $JAVA_INTERMEDIATES_PATH
@@ -157,6 +198,7 @@ create_apk_aapt() {
 }
 
 create_apk_aapt2() {
+	rm -rf $BUILD_INTERMEDIATES_PATH/compiled/*
 	mkdir -p $BUILD_INTERMEDIATES_PATH/compiled/res
 
 	echo "INFO: Compile the resources..."
