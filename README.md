@@ -10,7 +10,8 @@ For windows you need an environment like MSYS2 for running the shell script. We 
 1. Install the android sdk and ndk for your platform.
 2. Choose `build.sh` or `win-build.sh` depending on your platform.
 3. Modify the paths in the script as per your project and setup.
-4. Build and install the apk with `./build.sh --deploy`.
-5. Run `./build.sh --help` to see all the supported options.
+4. Prepare the project for building with `./build.sh --prepare`.
+5. Build and install the apk with `./build.sh --deploy`.
+6. Run `./build.sh --help` to see all the supported options.
 
 ## Known Issues

@@ -248,8 +248,12 @@ sign_apk() {
 }
 
 
-build() {
+prepare() {
 	prepare_project
+}
+
+
+build() {
 	compile_native
 	compile_java
 	create_apk_aapt2
@@ -279,15 +283,18 @@ usage() {
 	echo "win-build.sh [option]"
 	echo
 	echo "Options"
+	echo "  --prepare       = Prepares the project for building"
 	echo "  --build         = Builds the apk"
 	echo "  --deploy        = Builds and installs the apk"
 	echo "  --install       = Installs the apk from the build output folder"
 	echo "  --logcat        = Shows the logs from the apk"
 	echo "  --clean         = Deletes the build folder"
+	echo "  --help          = Shows this help text"
 }
 
-
-if [ "$1" == "--build" ]; then
+if [ "$1" == "--prepare" ]; then
+	prepare
+elif [ "$1" == "--build" ]; then
 	build
 elif [ "$1" == "--deploy" ]; then
 	build
