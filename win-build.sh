@@ -275,7 +275,7 @@ install() {
 
 logcat() {
 	$PLATFORM_TOOLS/adb.exe logcat -c
-	$PLATFORM_TOOLS/adb.exe logcat
+	$PLATFORM_TOOLS/adb.exe logcat | grep SDL/APP
 }
 
 
