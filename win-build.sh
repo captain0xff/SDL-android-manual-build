@@ -15,6 +15,7 @@ PROJECT_ROOT=`pwd`
 NATIVE_SRC_PATH=$PROJECT_ROOT/src
 ANDROID_PROJECT_PATH=$PROJECT_ROOT/android-project
 RES_PATH=$ANDROID_PROJECT_PATH/res
+ASSETS_PATH=$ANDROID_PROJECT_PATH/assets # Comment this line to stop the assets from being added
 JAVA_SRC_PATH=$ANDROID_PROJECT_PATH/java_glue
 ANDROID_MANIFEST_PATH=$ANDROID_PROJECT_PATH/AndroidManifest.xml
 
@@ -24,7 +25,7 @@ SDK_PATH=$ANDROID_HOME
 BUILD_TOOLS_VERSION=34.0.0
 BUILD_TOOLS=$SDK_PATH/build-tools/$BUILD_TOOLS_VERSION
 PLATFORMS=$SDK_PATH/platforms
-NDK_VERSION=25.2.9519653
+NDK_VERSION=27.0.11902837
 NDK_HOME=$SDK_PATH/ndk/$NDK_VERSION
 CMAKE_VERSION=3.22.1
 CMAKE_HOME=$SDK_PATH/cmake/$CMAKE_VERSION
@@ -39,6 +40,7 @@ JAVA_INTERMEDIATES_PATH=$BUILD_INTERMEDIATES_PATH/obj
 DEX_PATH=$BUILD_INTERMEDIATES_PATH
 NATIVE_LIBS_PATH=$BUILD_INTERMEDIATES_PATH/lib/$TARGET_ARCH
 NATIVE_BUILD_PATH=$BUILD_INTERMEDIATES_PATH/native
+JAVA_BUILD_PATH=$BUILD_INTERMEDIATES_PATH/java-build
 
 
 # Exit on error
@@ -128,26 +130,29 @@ compile_native() {
 	mkdir -p $NATIVE_LIBS_PATH
 	mkdir -p $NATIVE_BUILD_PATH
 
-	echo "INFO: Generating CMake the project..."
+	if [ ! -e $NATIVE_BUILD_PATH/build.ninja ]; then
+		echo "INFO: Generating CMake the project..."
 
-	$CMAKE_HOME/bin/cmake -H$PROJECT_ROOT \
-		-DCMAKE_SYSTEM_NAME=Android \
-		-DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
-		-DCMAKE_SYSTEM_VERSION=$TARGET_SDK \
-		-DANDROID_PLATFORM=android-$TARGET_SDK \
-		-DANDROID_ABI=$TARGET_ARCH \
-		-DCMAKE_ANDROID_ARCH_ABI=$TARGET_ARCH \
-		-DANDROID_NDK=$NDK_HOME \
-		-DCMAKE_ANDROID_NDK=$NDK_HOME \
-		-DCMAKE_TOOLCHAIN_FILE=$NDK_HOME/build/cmake/android.toolchain.cmake \
-		-DCMAKE_MAKE_PROGRAM=$CMAKE_HOME/bin/ninja \
-		-DCMAKE_LIBRARY_OUTPUT_DIRECTORY=$NATIVE_LIBS_PATH \
-		-DCMAKE_RUNTIME_OUTPUT_DIRECTORY=$NATIVE_LIBS_PATH \
-		-DCMAKE_BUILD_TYPE=Debug \
-		-B $NATIVE_BUILD_PATH \
-		-GNinja \
-		-DANDROID_APP_PLATFORM=android-$TARGET_SDK \
-		-DANDROID_STL=c++_static
+		$CMAKE_HOME/bin/cmake -H$PROJECT_ROOT \
+			-DCMAKE_SYSTEM_NAME=Android \
+			-DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+			-DCMAKE_SYSTEM_VERSION=$TARGET_SDK \
+			-DANDROID_PLATFORM=android-$TARGET_SDK \
+			-DANDROID_ABI=$TARGET_ARCH \
+			-DCMAKE_ANDROID_ARCH_ABI=$TARGET_ARCH \
+			-DANDROID_NDK=$NDK_HOME \
+			-DCMAKE_ANDROID_NDK=$NDK_HOME \
+			-DCMAKE_TOOLCHAIN_FILE=$NDK_HOME/build/cmake/android.toolchain.cmake \
+			-DCMAKE_MAKE_PROGRAM=$CMAKE_HOME/bin/ninja \
+			-DCMAKE_LIBRARY_OUTPUT_DIRECTORY=$NATIVE_LIBS_PATH \
+			-DCMAKE_RUNTIME_OUTPUT_DIRECTORY=$NATIVE_LIBS_PATH \
+			-DCMAKE_BUILD_TYPE=Debug \
+			-DCMAKE_COLOR_DIAGNOSTICS=ON \
+			-B $NATIVE_BUILD_PATH \
+			-GNinja \
+			-DANDROID_APP_PLATFORM=android-$TARGET_SDK \
+			-DANDROID_STL=c++_static
+	fi
 
 	echo "INFO: Compiling the native code..."
 
@@ -157,21 +162,22 @@ compile_native() {
 
 # Compile the java code and generate classes.dex
 compile_java() {
-	rm -rf $JAVA_INTERMEDIATES_PATH/*
+	if [ ! -e $JAVA_BUILD_PATH/build.ninja ]; then
+		echo "INFO: Generating CMake the project for java"
 
-	echo "INFO: Compiling the java code..."
+		cmake -H$JAVA_SRC_PATH\
+			-DJAVA_SRC_PATH=$JAVA_SRC_PATH \
+			-DPLATFORMS=$PLATFORMS \
+			-DTARGET_SDK=$TARGET_SDK \
+			-DBUILD_TOOLS=$BUILD_TOOLS \
+			-DBUILD_INTERMEDIATES_PATH=$BUILD_INTERMEDIATES_PATH \
+			-B $JAVA_BUILD_PATH \
+			-GNinja
+			# -DJAVA_INTERMEDIATES_PATH=$JAVA_INTERMEDIATES_PATH \
+			# -DJAVA_COMPILER=javac \
+	fi
 
-	javac -classpath $PLATFORMS/android-$TARGET_SDK/android.jar \
-		-d $JAVA_INTERMEDIATES_PATH \
-		-encoding UTF-8 \
-		$JAVA_SRC_PATH/*.java
-
-	echo "INFO: Generating the classes.dex..."
-
-	$BUILD_TOOLS/d8.bat $JAVA_INTERMEDIATES_PATH/*/*/*/* \
-		--output $BUILD_INTERMEDIATES_PATH \
-		--lib $PLATFORMS/android-$TARGET_SDK/android.jar \
-		--classpath $JAVA_INTERMEDIATES_PATH
+	$CMAKE_HOME/bin/ninja -C $JAVA_BUILD_PATH
 }
 
 
@@ -206,11 +212,12 @@ create_apk_aapt2() {
 	$BUILD_TOOLS/aapt2.exe compile $(cygpath -w $RES_PATH/*/*) \
 		-o "$(cygpath -w $BUILD_INTERMEDIATES_PATH/compiled/res)"
 
-	echo "INFO: Generating the apk and adding the compiled resources..."
+	echo "INFO: Generating the apk and adding the compiled resources and assets..."
 
 	$BUILD_TOOLS/aapt2.exe link -v \
 		-I $PLATFORMS/android-$TARGET_SDK/android.jar \
 		-R $(cygpath $BUILD_INTERMEDIATES_PATH/compiled/res/*) \
+		${ASSETS_PATH:+-A "$ASSETS_PATH"} \
 		--manifest $ANDROID_MANIFEST_PATH \
 		-o $BUILD_INTERMEDIATES_PATH/$APK_NAME.unaligned
 
@@ -268,7 +275,7 @@ install() {
 
 logcat() {
 	$PLATFORM_TOOLS/adb.exe logcat -c
-	$PLATFORM_TOOLS/adb.exe logcat | grep SDL/APP
+	$PLATFORM_TOOLS/adb.exe logcat
 }
 
 
