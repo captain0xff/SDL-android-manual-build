@@ -15,6 +15,7 @@ PROJECT_ROOT=`pwd`
 NATIVE_SRC_PATH=$PROJECT_ROOT/src
 ANDROID_PROJECT_PATH=$PROJECT_ROOT/android-project
 RES_PATH=$ANDROID_PROJECT_PATH/res
+# The folder must be names assets
 ASSETS_PATH=$ANDROID_PROJECT_PATH/assets # Comment this line to stop the assets from being added
 JAVA_SRC_PATH=$ANDROID_PROJECT_PATH/java_glue
 ANDROID_MANIFEST_PATH=$ANDROID_PROJECT_PATH/AndroidManifest.xml
@@ -22,7 +23,7 @@ ANDROID_MANIFEST_PATH=$ANDROID_PROJECT_PATH/AndroidManifest.xml
 
 # Dev-tools details
 SDK_PATH=$ANDROID_HOME
-BUILD_TOOLS_VERSION=34.0.0
+BUILD_TOOLS_VERSION=35.0.0-rc4
 BUILD_TOOLS=$SDK_PATH/build-tools/$BUILD_TOOLS_VERSION
 PLATFORMS=$SDK_PATH/platforms
 NDK_VERSION=27.0.11902837
@@ -186,9 +187,10 @@ create_apk_aapt() {
 
 	echo "INFO: Generating the apk..."
 
-	$BUILD_TOOLS/aapt.exe package -f \
+	$BUILD_TOOLS/aapt.exe package -f -v \
 		-M $ANDROID_MANIFEST_PATH \
 		-S $RES_PATH \
+		${ASSETS_PATH:+-A "$ASSETS_PATH"} \
 		-I $PLATFORMS/android-$TARGET_SDK/android.jar \
 		-F $BUILD_INTERMEDIATES_PATH/$APK_NAME.unaligned
 
@@ -217,7 +219,6 @@ create_apk_aapt2() {
 	$BUILD_TOOLS/aapt2.exe link -v \
 		-I $PLATFORMS/android-$TARGET_SDK/android.jar \
 		-R $(cygpath $BUILD_INTERMEDIATES_PATH/compiled/res/*) \
-		${ASSETS_PATH:+-A "$ASSETS_PATH"} \
 		--manifest $ANDROID_MANIFEST_PATH \
 		-o $BUILD_INTERMEDIATES_PATH/$APK_NAME.unaligned
 
@@ -230,6 +231,15 @@ create_apk_aapt2() {
 	echo "INFO: Adding the native libs..."
 
 	zip -u $APK_NAME.unaligned lib/$TARGET_ARCH/*
+
+	if [[ -v PATH ]]; then
+		cd $ASSETS_PATH/..
+
+		echo "INFO: Adding the assets directory..."
+
+		zip -ur $BUILD_INTERMEDIATES_PATH/$APK_NAME.unaligned assets
+	fi
+
 }
 
 
